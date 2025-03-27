@@ -1,308 +1,162 @@
 import React, { useState } from 'react';
-import { useProducts } from '../context/ProductContext';
-import { Product } from '../types';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import { useUser } from '../context/UserContext';
 
-const ManageProducts: React.FC = () => {
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
-  const [isAdding, setIsAdding] = useState(false);
-  const [isEditing, setIsEditing] = useState<number | null>(null);
-  const [formData, setFormData] = useState<Partial<Product>>({
-    id: 0,
+const ManageUsers: React.FC = () => {
+  const { allUsers, addUser, deleteUser } = useUser();
+  const [message, setMessage] = useState<string | null>(null);
+  const [newUser, setNewUser] = useState({
     name: '',
-    price: 0,
-    originalPrice: 0,
-    rating: 0,
-    reviewCount: 0,
-    image: '',
-    category: '',
-    brand: '',
-    description: '',
+    email: '',
+    role: 'user' as 'admin' | 'user',
+    avatar: '',
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'price' || name === 'originalPrice' || name === 'rating' || name === 'reviewCount' ? Number(value) : value,
-    }));
-  };
-
-  const handleAddProduct = () => {
-    const newProduct: Product = {
-      id: products.length ? Math.max(...products.map((p) => p.id)) + 1 : 1,
-      name: formData.name || 'New Product',
-      price: formData.price || 0,
-      originalPrice: formData.originalPrice || 0,
-      rating: formData.rating || 0,
-      reviewCount: formData.reviewCount || 0,
-      image: formData.image || 'https://via.placeholder.com/150',
-      category: formData.category || 'Uncategorized',
-      brand: formData.brand || 'Generic',
-      description: formData.description || 'No description provided.',
-    };
-    addProduct(newProduct);
-    setIsAdding(false);
-    setFormData({
-      id: 0,
-      name: '',
-      price: 0,
-      originalPrice: 0,
-      rating: 0,
-      reviewCount: 0,
-      image: '',
-      category: '',
-      brand: '',
-      description: '',
-    });
-  };
-
-  const handleEditProduct = (product: Product) => {
-    setIsEditing(product.id);
-    setFormData(product);
-  };
-
-  const handleUpdateProduct = () => {
-    if (isEditing === null) return;
-    const updatedProduct: Product = {
-      ...formData,
-      id: isEditing,
-    } as Product;
-    updateProduct(isEditing, updatedProduct);
-    setIsEditing(null);
-    setFormData({
-      id: 0,
-      name: '',
-      price: 0,
-      originalPrice: 0,
-      rating: 0,
-      reviewCount: 0,
-      image: '',
-      category: '',
-      brand: '',
-      description: '',
-    });
-  };
-
-  const handleDeleteProduct = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      deleteProduct(id);
+  const handleDelete = (email: string | undefined) => {
+    if (!email) {
+      setMessage('Cannot delete user: Email is missing.');
+      return;
     }
+    if (window.confirm(`Are you sure you want to delete the user with email ${email}?`)) {
+      deleteUser(email);
+      setMessage(`User with email ${email} has been deleted.`);
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
+
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUser.name || !newUser.email) {
+      setMessage('Name and email are required.');
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    if (allUsers.some((user) => user.email === newUser.email)) {
+      setMessage('A user with this email already exists.');
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    const userToAdd = {
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      avatar: newUser.avatar || 'https://picsum.photos/40',
+    };
+
+    addUser(userToAdd);
+    setMessage(`User ${newUser.name} has been added successfully.`);
+    setTimeout(() => setMessage(null), 3000);
+
+    setNewUser({ name: '', email: '', role: 'user', avatar: '' });
   };
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">Manage Products</h2>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#2874f0] text-white rounded-sm hover:bg-[#1a5dc7]"
-        >
-          <Plus size={20} />
-          Add Product
-        </button>
-      </div>
+      <h2 className="text-xl font-semibold mb-4">Manage Users</h2>
 
-      {/* Add/Edit Product Form */}
-      {(isAdding || isEditing !== null) && (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h3 className="text-lg font-semibold mb-4">{isAdding ? 'Add Product' : 'Edit Product'}</h3>
+      {/* Add User Form */}
+      <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
+        <h3 className="text-lg font-medium mb-4">Add New User</h3>
+        <form onSubmit={handleAddUser}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-700 font-medium mb-2">Name</label>
               <input
                 type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                 className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Product Name"
+                placeholder="Enter name"
+                required
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Price</label>
+              <label className="block text-gray-700 font-medium mb-2">Email</label>
               <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleInputChange}
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                 className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Price"
+                placeholder="Enter email"
+                required
               />
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Original Price</label>
-              <input
-                type="number"
-                name="originalPrice"
-                value={formData.originalPrice}
-                onChange={handleInputChange}
+              <label className="block text-gray-700 font-medium mb-2">Role</label>
+              <select
+                value={newUser.role}
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'admin' | 'user' })}
                 className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Original Price"
-              />
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-2">Rating</label>
-              <input
-                type="number"
-                name="rating"
-                value={formData.rating}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Rating (0-5)"
-                step="0.1"
-                min="0"
-                max="5"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Review Count</label>
-              <input
-                type="number"
-                name="reviewCount"
-                value={formData.reviewCount}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Review Count"
-                min="0"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Image URL</label>
+              <label className="block text-gray-700 font-medium mb-2">Avatar URL (Optional)</label>
               <input
                 type="text"
-                name="image"
-                value={formData.image}
-                onChange={handleInputChange}
+                value={newUser.avatar}
+                onChange={(e) => setNewUser({ ...newUser, avatar: e.target.value })}
                 className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Image URL"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Category</label>
-              <input
-                type="text"
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Category"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">Brand</label>
-              <input
-                type="text"
-                name="brand"
-                value={formData.brand}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Brand"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-gray-700 font-medium mb-2">Description</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#2874f0]"
-                placeholder="Description"
-                rows={3}
+                placeholder="Enter avatar URL"
               />
             </div>
           </div>
-          <div className="mt-4 flex gap-4">
-            <button
-              onClick={isAdding ? handleAddProduct : handleUpdateProduct}
-              className="px-4 py-2 bg-[#fb641b] text-white rounded-sm hover:bg-[#f85606]"
-            >
-              {isAdding ? 'Add Product' : 'Update Product'}
-            </button>
-            <button
-              onClick={() => {
-                setIsAdding(false);
-                setIsEditing(null);
-                setFormData({
-                  id: 0,
-                  name: '',
-                  price: 0,
-                  originalPrice: 0,
-                  rating: 0,
-                  reviewCount: 0,
-                  image: '',
-                  category: '',
-                  brand: '',
-                  description: '',
-                });
-              }}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-sm hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="mt-4 px-4 py-2 bg-[#2874f0] text-white rounded-sm hover:bg-[#1a5dc7] transition-colors"
+          >
+            Add User
+          </button>
+        </form>
+      </div>
+
+      {/* Feedback Message */}
+      {message && (
+        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-sm">
+          {message}
         </div>
       )}
 
-      {/* Product List */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Product List</h3>
-        {products.length === 0 ? (
-          <p className="text-gray-600">No products available.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-3">ID</th>
-                  <th className="p-3">Image</th>
-                  <th className="p-3">Name</th>
-                  <th className="p-3">Price</th>
-                  <th className="p-3">Category</th>
-                  <th className="p-3">Brand</th>
-                  <th className="p-3">Rating</th>
-                  <th className="p-3">Actions</th>
+      {/* User List */}
+      {allUsers.length === 0 ? (
+        <p className="text-gray-600">No users found.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+            <thead>
+              <tr className="bg-gray-100 border-b">
+                <th className="py-3 px-4 text-left text-gray-600 font-medium">Name</th>
+                <th className="py-3 px-4 text-left text-gray-600 font-medium">Email</th>
+                <th className="py-3 px-4 text-left text-gray-600 font-medium">Role</th>
+                <th className="py-3 px-4 text-left text-gray-600 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allUsers.map((user) => (
+                <tr key={user.email || user.name} className="border-b hover:bg-gray-50">
+                  <td className="py-3 px-4">{user.name}</td>
+                  <td className="py-3 px-4">{user.email || 'N/A'}</td>
+                  <td className="py-3 px-4">{user.role}</td>
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => handleDelete(user.email)}
+                      className="px-3 py-1 bg-red-600 text-white rounded-sm hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      disabled={user.email === 'admin@example.com' || !user.email}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id} className="border-b">
-                    <td className="p-3">{product.id}</td>
-                    <td className="p-3">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-12 h-12 object-contain"
-                      />
-                    </td>
-                    <td className="p-3">{product.name}</td>
-                    <td className="p-3">₹{product.price.toLocaleString('en-IN')}</td>
-                    <td className="p-3">{product.category}</td>
-                    <td className="p-3">{product.brand}</td>
-                    <td className="p-3">{product.rating}</td>
-                    <td className="p-3 flex gap-2">
-                      <button
-                        onClick={() => handleEditProduct(product)}
-                        className="p-2 bg-[#2874f0] text-white rounded-sm hover:bg-[#1a5dc7]"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteProduct(product.id)}
-                        className="p-2 bg-red-600 text-white rounded-sm hover:bg-red-700"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
 
-export default ManageProducts;
+export default ManageUsers;
